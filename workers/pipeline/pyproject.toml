@@ -1,0 +1,16 @@
+[project]
+name = "video-ai-pipeline"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.7", "redis>=5", "sqlalchemy>=2", "video-ai-contracts"]
+
+[project.optional-dependencies]
+tts = ["kokoro-onnx>=0.4"]
+
+[project.scripts]
+video-ai-render = "pipeline.worker:main"
+video-ai-worker = "pipeline.service:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"

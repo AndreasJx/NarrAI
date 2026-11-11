@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ffmpeg fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+COPY apps/api/requirements.txt /tmp/requirements.txt
+COPY packages/contracts /workspace/packages/contracts
+COPY workers/pipeline /workspace/workers/pipeline
+RUN pip install --no-cache-dir -r /tmp/requirements.txt \
+    && pip install --no-cache-dir /workspace/packages/contracts /workspace/workers/pipeline
+
+COPY apps/api /workspace/apps/api
+RUN useradd --create-home --uid 10001 app \
+    && mkdir -p /workspace/artifacts \
+    && chown -R app:app /workspace
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspace/apps/api \
+    ARTIFACT_DIR=/workspace/artifacts
+
+USER app
+EXPOSE 8080
+CMD ["sh", "-c", "cd /workspace/apps/api && alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers"]

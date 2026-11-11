@@ -1,0 +1,10 @@
+{
+  "name": "video-ai-platform",
+  "private": true,
+  "scripts": {
+    "e2e": "npm --prefix apps/web run e2e",
+    "e2e:install": "npm --prefix apps/web exec playwright install chromium",
+    "lint": "npm --prefix apps/web run lint",
+    "dev:web": "npm --prefix apps/web run dev"
+  }
+}

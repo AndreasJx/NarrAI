@@ -1,0 +1,13 @@
+{
+  "endpoint": "https://chat.dev.woopi.ai",
+  "api_key": "cole-a-chave-real-aqui",
+  "chat_deployment": "gpt-5.6-sol",
+  "transcribe_deployment": "",
+  "api_version": "2024-10-21",
+  "reasoning": true,
+  "reasoning_effort": "low",
+  "min_completion_tokens": 16000,
+  "timeout_seconds": 300,
+  "input_cents_per_mtok": 250,
+  "output_cents_per_mtok": 1000
+}

@@ -1,0 +1,31 @@
+[project]
+name = "video-ai-api"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "sqlalchemy>=2.0",
+  "alembic>=1.14",
+  "redis>=5",
+  "pydantic-settings>=2.4",
+  "httpx>=0.27",
+  "cryptography>=44",
+  "pwdlib[argon2]>=0.2",
+  "pyjwt>=2.9",
+  "boto3>=1.35",
+  "youtube-transcript-api>=1.0",
+  "yt-dlp>=2025.1",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.2"]
+test = ["pytest>=8.2", "moto[s3]>=5.0"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "../..", "../../packages/contracts", "../../workers/pipeline"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
