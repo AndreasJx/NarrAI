@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 
@@ -161,6 +161,34 @@ class Approval(Timestamped, Base):
     __table_args__ = (UniqueConstraint("project_id", "gate", "target_id"),)
 
 
+class PlatformCredential(Timestamped, Base):
+    """OAuth app registered by the organization (client id/secret); overrides the .env values."""
+
+    __tablename__ = "platform_credentials"
+    organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
+    platform: Mapped[str] = mapped_column(String(30))
+    client_id: Mapped[str] = mapped_column(String(500), default="")
+    client_secret_encrypted: Mapped[str] = mapped_column(Text, default="")
+    live_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_by: Mapped[str] = mapped_column(String(200), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    __table_args__ = (UniqueConstraint("organization_id", "platform"),)
+
+
+class ChannelAccount(Timestamped, Base):
+    """Channel authorized once via OAuth and reused by every project of the organization."""
+
+    __tablename__ = "channel_accounts"
+    organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), index=True)
+    platform: Mapped[str] = mapped_column(String(30))
+    external_account_id: Mapped[str] = mapped_column(String(500))
+    display_name: Mapped[str] = mapped_column(String(300), default="")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    __table_args__ = (UniqueConstraint("organization_id", "platform", "external_account_id"),)
+
+
 class ChannelConnection(Timestamped, Base):
     __tablename__ = "channel_connections"
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
@@ -168,6 +196,8 @@ class ChannelConnection(Timestamped, Base):
     external_account_id: Mapped[str] = mapped_column(String(500))
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    account_id: Mapped[int | None] = mapped_column(ForeignKey("channel_accounts.id"), nullable=True, index=True)
+    account: Mapped[ChannelAccount | None] = relationship()
     __table_args__ = (UniqueConstraint("project_id", "platform", "external_account_id"),)
 
 

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from video_ai_contracts import ProjectStatus
 
 from .ai import get_ai
+from .channels import active_account, is_authorized, live_allowed
 from .config import get_settings
 from .deps import audit, set_status
 from .gates import GateResult, review_render, review_script
@@ -290,23 +291,12 @@ def _connection(db: Session, project: Project, platform: str) -> ChannelConnecti
     )
     if existing:
         return existing
-    template = None
-    if platform != "local":
-        template = db.scalar(
-            select(ChannelConnection)
-            .join(Project, Project.id == ChannelConnection.project_id)
-            .where(
-                Project.organization_id == project.organization_id,
-                ChannelConnection.platform == platform,
-                ChannelConnection.enabled.is_(True),
-            )
-            .order_by(ChannelConnection.id.desc())
-        )
+    account = active_account(db, project.organization_id, platform) if platform != "local" else None
     connection = ChannelConnection(
         project_id=project.id,
-        platform=platform if (template or platform == "local") else "local",
-        external_account_id=template.external_account_id if template else "narra-autopilot",
-        config=dict(template.config or {}) if template else {},
+        platform=platform if (account or platform == "local") else "local",
+        external_account_id=account.external_account_id if account else "narra-autopilot",
+        account_id=account.id if account else None,
     )
     db.add(connection)
     db.flush()
@@ -334,8 +324,11 @@ def _publish(db: Session, project: Project, storage: Storage):
     script = db.get(ScriptVersion, render.script_version_id)
     meta = script.metadata_json or {}
     connection = _connection(db, project, config.platform)
-    authorized = bool((connection.config or {}).get("access_token_encrypted"))
-    live = bool(config.live_publish and settings.allow_live_publish and authorized and connection.platform != "local")
+    live = bool(
+        config.live_publish
+        and is_authorized(connection)
+        and live_allowed(db, project.organization_id, connection.platform, settings)
+    )
     variants = [title for title in meta.get("title_variants") or [] if title] or [meta.get("title") or project.name]
     title = variants[0][:300]
     if len(variants) > 1:

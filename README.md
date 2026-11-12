@@ -66,6 +66,17 @@ Preencha no `.env` e recrie os containers (`docker compose up -d api worker`). N
 | `PEXELS_API_KEY`, `PIXABAY_API_KEY` | fotos e vídeos de banco; Wikimedia Commons e Openverse funcionam sem chave |
 | `FAIR_USE_CLIPS_ENABLED=true` | trechos de até 8 s de vídeos de referência, com crédito (veja os riscos em [docs/AUTOMACAO.md](docs/AUTOMACAO.md)) |
 
+### Login nas plataformas de publicação
+
+YouTube e TikTok não dependem do `.env`. Em **Configurações → Plataformas de publicação**, o proprietário:
+
+1. copia a URI de retorno mostrada ali e a registra no console da plataforma (Google Cloud: "ID do cliente OAuth" do tipo aplicativo da Web, com a YouTube Data API v3 ativada; TikTok: app com Login Kit e Content Posting API);
+2. cola o client ID e o client secret (o secret é salvo criptografado com `CREDENTIAL_SECRET` e nunca volta para o navegador);
+3. clica em **Conectar conta** e autoriza o canal. A conta fica disponível para todos os projetos da organização e para o piloto automático; o token é renovado automaticamente;
+4. marca **Permitir publicação real** quando quiser sair do modo simulado.
+
+Para trocar de canal, conecte outra conta ou desconecte a atual na mesma tela; nada precisa ser reiniciado. Na aba **Publicação** de um projeto, as contas da organização aparecem com "usar neste projeto". `YOUTUBE_CLIENT_ID`/`YOUTUBE_CLIENT_SECRET`, `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET` no `.env` continuam aceitos como reserva para organizações sem app próprio, e `ALLOW_LIVE_PUBLISH=true` libera a publicação real para todas. Logins feitos por projeto antes desta versão viram contas da organização na migração `0003`.
+
 Exemplo com gateway próprio e modelo de raciocínio: a URL `https://chat.dev.woopi.ai/openai/deployments/gpt-5.6-sol/chat/completions?api-version=2024-10-21` vira
 
 ```bash
@@ -109,7 +120,7 @@ O smoke usa `E2E_BASE_URL` (padrão `http://localhost:3000`) e cria uma conta no
 
 ## Papéis
 
-- **Proprietário**: tudo, mais organização, orçamento, voz padrão e membros.
+- **Proprietário**: tudo, mais organização, orçamento, voz padrão, membros e apps OAuth das plataformas.
 - **Editor**: cria projetos, edita e aprova roteiros, renderiza, conecta canais e publica.
 - **Leitor**: acompanha projetos, prévias e métricas.
 

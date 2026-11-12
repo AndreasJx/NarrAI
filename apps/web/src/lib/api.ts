@@ -319,6 +319,8 @@ export type Connection = {
   enabled: boolean;
   authorized: boolean;
   created_at: string;
+  account_id: number | null;
+  display_name: string;
 };
 export type Platform = {
   id: string;
@@ -326,6 +328,32 @@ export type Platform = {
   live_supported: boolean;
   oauth_configured: boolean;
   live_enabled: boolean;
+  accounts: number;
+};
+export type PlatformCredential = {
+  platform: string;
+  label: string;
+  client_id: string;
+  has_secret: boolean;
+  source: "organization" | "env" | "none";
+  live_enabled: boolean;
+  live_forced_by_env: boolean;
+  redirect_uri: string;
+  console_url: string;
+  updated_by: string;
+  updated_at: string | null;
+};
+export type ChannelAccount = {
+  id: number;
+  platform: string;
+  external_account_id: string;
+  display_name: string;
+  enabled: boolean;
+  authorized: boolean;
+  can_refresh: boolean;
+  expires_at: string | null;
+  projects: number;
+  updated_at: string;
 };
 export type Publication = {
   id: number;
@@ -533,9 +561,17 @@ export const api = {
     platforms: () => request<Platform[]>("/platforms"),
     create: (projectId: number, platform: string, external_account_id: string) =>
       request<Connection>(`/projects/${projectId}/connections`, json("POST", { platform, external_account_id })),
+    link: (projectId: number, account: ChannelAccount) =>
+      request<Connection>(`/projects/${projectId}/connections`, json("POST", { platform: account.platform, account_id: account.id })),
     disable: (connectionId: number) => request<void>(`/connections/${connectionId}`, json("DELETE")),
-    authorize: (platform: string, projectId: number) =>
+    authorize: (platform: string, projectId?: number) =>
       request<{ authorization_url: string }>(`/platforms/${platform}/oauth/authorize`, { query: { project_id: projectId } }),
+    credentials: () => request<PlatformCredential[]>("/platform-credentials"),
+    saveCredentials: (platform: string, body: { client_id: string; client_secret?: string; live_enabled: boolean }) =>
+      request<PlatformCredential>(`/platform-credentials/${platform}`, json("PUT", body)),
+    removeCredentials: (platform: string) => request<void>(`/platform-credentials/${platform}`, json("DELETE")),
+    accounts: () => request<ChannelAccount[]>("/channel-accounts"),
+    disconnectAccount: (accountId: number) => request<void>(`/channel-accounts/${accountId}`, json("DELETE")),
   },
   publications: {
     create: (

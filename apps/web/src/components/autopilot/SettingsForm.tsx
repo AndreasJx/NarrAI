@@ -105,7 +105,7 @@ export function AutopilotSettingsForm({ initial, onSaved }: { initial: Autopilot
             <option value="youtube">YouTube</option>
             <option value="tiktok">TikTok</option>
           </select>
-          <small>YouTube/TikTok reutilizam a última conexão OAuth autorizada da organização.</small>
+          <small>YouTube/TikTok usam a conta conectada em Plataformas de publicação.</small>
         </label>
       </div>
       <label className="checkbox">
@@ -114,7 +114,7 @@ export function AutopilotSettingsForm({ initial, onSaved }: { initial: Autopilot
       </label>
       <label className="checkbox">
         <input type="checkbox" checked={form.live_publish} disabled={disabled} onChange={(event) => set("live_publish", event.target.checked)} />
-        Publicar de verdade (exige ALLOW_LIVE_PUBLISH=true e canal OAuth)
+        Publicar de verdade (exige conta conectada e publicação real liberada para a plataforma)
       </label>
       <label>
         Temas proibidos (um por linha)

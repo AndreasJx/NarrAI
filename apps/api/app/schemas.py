@@ -288,9 +288,10 @@ class PreviewOut(BaseModel):
 
 class ConnectionCreate(BaseModel):
     platform: Literal["youtube", "tiktok", "local"]
-    external_account_id: str = Field(min_length=1, max_length=500)
+    external_account_id: str = Field(default="", max_length=500)
     enabled: bool = True
     config: dict[str, Any] = Field(default_factory=dict)
+    account_id: int | None = None
 
 
 class ConnectionOut(BaseModel):
@@ -301,6 +302,46 @@ class ConnectionOut(BaseModel):
     enabled: bool
     authorized: bool
     created_at: datetime
+    account_id: int | None = None
+    display_name: str = ""
+
+
+class PlatformCredentialOut(BaseModel):
+    platform: str
+    label: str
+    client_id: str
+    has_secret: bool
+    source: Literal["organization", "env", "none"]
+    live_enabled: bool
+    live_forced_by_env: bool
+    redirect_uri: str
+    console_url: str
+    updated_by: str = ""
+    updated_at: datetime | None = None
+
+
+class PlatformCredentialUpdate(BaseModel):
+    client_id: str = Field(min_length=1, max_length=500)
+    client_secret: str | None = Field(default=None, max_length=2000)
+    live_enabled: bool = False
+
+    @field_validator("client_id", "client_secret")
+    @classmethod
+    def strip(cls, value: str | None) -> str | None:
+        return value.strip() if value is not None else None
+
+
+class ChannelAccountOut(BaseModel):
+    id: int
+    platform: str
+    external_account_id: str
+    display_name: str
+    enabled: bool
+    authorized: bool
+    can_refresh: bool
+    expires_at: datetime | None
+    projects: int
+    updated_at: datetime
 
 
 class OAuthCallback(BaseModel):

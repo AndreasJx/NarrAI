@@ -129,10 +129,9 @@ def youtube_retention(token: str, video_id: str, published_at) -> list[list[floa
 
 def refresh_organization_metrics(db: Session, organization_id: int) -> int:
     from .adapters import metrics_for
-    from .oauth import OAuthService
-    from .publishing import access_token_for
+    from .channels import access_token_for
 
-    oauth = OAuthService(get_settings())
+    settings = get_settings()
     rows = db.execute(
         select(Publication, ChannelConnection)
         .join(ChannelConnection, ChannelConnection.id == Publication.connection_id)
@@ -141,7 +140,7 @@ def refresh_organization_metrics(db: Session, organization_id: int) -> int:
     )
     refreshed = 0
     for publication, connection in rows:
-        token = access_token_for(connection, oauth)
+        token = access_token_for(db, connection, settings)
         if not token:
             continue
         age_hours = (utcnow() - (publication.published_at or publication.created_at)).total_seconds() / 3600

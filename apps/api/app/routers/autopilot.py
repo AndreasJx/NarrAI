@@ -9,10 +9,12 @@ from sqlalchemy import func, select
 from .. import autopilot as engine
 from ..ai import AzureOpenAIProvider, ai_configured
 from ..auth import CurrentContext, EditorContext, OwnerContext
+from ..channels import OAUTH_PLATFORMS, live_allowed, oauth_client
 from ..config import get_settings
 from ..deps import DbSession, audit, require_project
 from ..learning import active_rules, plan_topics, store_retention, update_playbook
 from ..models import Approval, Project, Publication, RetentionCurve, StageRun, TopicSuggestion
+from ..oauth import OAuthService
 from ..schemas import (
     AutopilotOverview,
     AutopilotProjectCreate,
@@ -35,8 +37,9 @@ router = APIRouter(tags=["autopilot"])
 logger = logging.getLogger("narra.autopilot")
 
 
-def integrations() -> dict[str, bool]:
+def integrations(db: DbSession, organization_id: int) -> dict[str, bool]:
     settings = get_settings()
+    oauth = OAuthService(settings)
     return {
         "ai": ai_configured(settings),
         "transcription": bool(ai_configured(settings) and settings.azure_openai_transcribe_deployment),
@@ -47,7 +50,8 @@ def integrations() -> dict[str, bool]:
         "open_media": True,
         "fair_use_clips": settings.fair_use_clips_enabled and bool(shutil.which("yt-dlp")),
         "queue": bool(settings.redis_url),
-        "live_publish": settings.allow_live_publish,
+        **{f"{platform}_login": oauth_client(db, organization_id, platform, oauth) is not None for platform in OAUTH_PLATFORMS},
+        "live_publish": any(live_allowed(db, organization_id, platform, settings) for platform in OAUTH_PLATFORMS),
     }
 
 
@@ -81,8 +85,8 @@ def update_autopilot_settings(body: AutopilotSettingsUpdate, ctx: OwnerContext, 
 
 
 @router.get("/autopilot/integrations")
-def get_integrations(_: CurrentContext) -> dict[str, bool]:
-    return integrations()
+def get_integrations(ctx: CurrentContext, db: DbSession) -> dict[str, bool]:
+    return integrations(db, ctx.organization.id)
 
 
 @router.post("/autopilot/integrations/test")
@@ -324,5 +328,5 @@ def overview(ctx: CurrentContext, db: DbSession):
             select(func.count()).where(TopicSuggestion.organization_id == ctx.organization.id, TopicSuggestion.status == "proposed")
         ) or 0,
         recent_runs=[StageRunOut.model_validate(run) for run in runs[:20]],
-        integrations=integrations(),
+        integrations=integrations(db, ctx.organization.id),
     )

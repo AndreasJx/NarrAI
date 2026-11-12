@@ -3,7 +3,7 @@
 import { ExternalLink, Link2, Play, RefreshCw, Send, Unplug, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
-import { api, type Connection, type Overview, type Platform } from "@/lib/api";
+import { api, type ChannelAccount, type Connection, type Overview, type Platform } from "@/lib/api";
 import { formatDateTime, newKey, PLATFORM_LABEL } from "@/lib/format";
 import { useAction, useResource } from "@/lib/hooks";
 import { publishApproved } from "@/lib/workflow";
@@ -19,6 +19,7 @@ export function PublishTab({ overview, reload, goTo, connected }: Props) {
   const toast = useToast();
   const { busy, run } = useAction();
   const platforms = useResource(api.channels.platforms, "platforms");
+  const accounts = useResource(api.channels.accounts, "channel-accounts");
   const pid = overview.project.id;
   const render = overview.latest_render;
   const rendered = render?.status === "completed";
@@ -50,15 +51,25 @@ export function PublishTab({ overview, reload, goTo, connected }: Props) {
     <div className="stack">
       {connected && <div className="notice">Canal {PLATFORM_LABEL[connected] ?? connected} conectado via OAuth.</div>}
       <div className="tab-grid">
-        <Panel title="Canais" description="Conecte via OAuth para publicar de verdade ou use o modo simulado para testar o fluxo.">
+        <Panel
+          title="Canais"
+          description="Use uma conta já conectada da organização, conecte uma nova via OAuth ou use o modo simulado para testar o fluxo."
+        >
           {platforms.data?.map((platform) => (
             <ChannelRow
               key={platform.id}
               platform={platform}
               connections={active.filter((item) => item.platform === platform.id)}
+              available={(accounts.data ?? []).filter(
+                (account) =>
+                  account.platform === platform.id && !active.some((item) => item.account_id === account.id),
+              )}
               canEdit={canEdit}
               busy={busy}
               onOAuth={() => connectOAuth(platform.id)}
+              onLink={(account) =>
+                action(`link-${account.id}`, () => api.channels.link(pid, account), `${account.display_name || account.external_account_id} vinculado ao projeto`)
+              }
               onSimulated={() =>
                 action(
                   `sim-${platform.id}`,
@@ -159,17 +170,21 @@ export function PublishTab({ overview, reload, goTo, connected }: Props) {
 function ChannelRow({
   platform,
   connections,
+  available,
   canEdit,
   busy,
   onOAuth,
+  onLink,
   onSimulated,
   onDisable,
 }: {
   platform: Platform;
   connections: Connection[];
+  available: ChannelAccount[];
   canEdit: boolean;
   busy: string | null;
   onOAuth: () => void;
+  onLink: (account: ChannelAccount) => void;
   onSimulated: () => void;
   onDisable: (connection: Connection) => void;
 }) {
@@ -183,7 +198,7 @@ function ChannelRow({
               <button
                 className="secondary-button small"
                 disabled={!platform.oauth_configured || busy !== null}
-                title={platform.oauth_configured ? undefined : "Defina as credenciais OAuth no .env da API"}
+                title={platform.oauth_configured ? undefined : "Cadastre o app OAuth em Configurações > Plataformas de publicação"}
                 onClick={onOAuth}
               >
                 <Link2 size={14} />OAuth
@@ -195,10 +210,21 @@ function ChannelRow({
           </div>
         )}
       </div>
+      {canEdit &&
+        available.map((account) => (
+          <div className="channel-connection" key={`account-${account.id}`}>
+            <span className={`dot ${account.authorized ? "ok" : ""}`} />
+            <span>{account.display_name || account.external_account_id}</span>
+            <small>conta da organização</small>
+            <button className="text-button" disabled={busy !== null} onClick={() => onLink(account)}>
+              usar neste projeto
+            </button>
+          </div>
+        ))}
       {connections.map((connection) => (
         <div className="channel-connection" key={connection.id}>
           <span className={`dot ${connection.authorized ? "ok" : ""}`} />
-          <span>{connection.external_account_id}</span>
+          <span>{connection.display_name || connection.external_account_id}</span>
           <small>{connection.authorized ? "OAuth autorizado" : "simulado"}</small>
           {canEdit && (
             <button className="icon-button" onClick={() => onDisable(connection)} aria-label="Desconectar">
@@ -262,7 +288,7 @@ function PublishForm({
         <select value={connection.id} onChange={(event) => setConnectionId(Number(event.target.value))}>
           {connections.map((item) => (
             <option key={item.id} value={item.id}>
-              {PLATFORM_LABEL[item.platform]} · {item.external_account_id}
+              {PLATFORM_LABEL[item.platform]} · {item.display_name || item.external_account_id}
             </option>
           ))}
         </select>
@@ -284,7 +310,9 @@ function PublishForm({
         Publicar de verdade na plataforma
         {!liveAllowed && (
           <small>
-            {connection.authorized ? "Publicação real desativada (ALLOW_LIVE_PUBLISH=false)." : "Requer canal conectado via OAuth."}
+            {connection.authorized
+              ? "Publicação real desativada para esta plataforma (libere em Configurações > Plataformas de publicação)."
+              : "Requer canal conectado via OAuth."}
           </small>
         )}
       </label>

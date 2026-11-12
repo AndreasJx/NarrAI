@@ -4,16 +4,11 @@ from sqlalchemy.orm import Session
 from video_ai_contracts import ProjectStatus, PublishRequest
 
 from .adapters import publisher_for
+from .channels import access_token_for, live_allowed
 from .config import Settings
 from .deps import audit, set_status
 from .models import ChannelConnection, Project, Publication, Render, utcnow
-from .oauth import OAuthService
 from .storage import Storage
-
-
-def access_token_for(connection: ChannelConnection, oauth: OAuthService) -> str | None:
-    encrypted = (connection.config or {}).get("access_token_encrypted")
-    return oauth.decrypt(encrypted) if encrypted else None
 
 
 def execute_publication(
@@ -32,7 +27,8 @@ def execute_publication(
             connection.platform,
             publication.live,
             settings,
-            access_token_for(connection, OAuthService(settings)),
+            access_token_for(db, connection, settings) if publication.live else None,
+            live_enabled=live_allowed(db, project.organization_id, connection.platform, settings),
         )
         request = PublishRequest(
             title=publication.title,

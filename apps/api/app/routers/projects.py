@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from video_ai_contracts import ProjectStatus
 
 from ..auth import CurrentContext, EditorContext
+from ..channels import is_authorized
 from ..deps import DbSession, audit, require_project, set_status
 from ..models import (
     Approval,
@@ -59,8 +60,10 @@ def connection_out(connection: ChannelConnection) -> ConnectionOut:
         platform=connection.platform,
         external_account_id=connection.external_account_id,
         enabled=connection.enabled,
-        authorized=bool((connection.config or {}).get("access_token_encrypted")),
+        authorized=is_authorized(connection),
         created_at=connection.created_at,
+        account_id=connection.account_id,
+        display_name=connection.account.display_name if connection.account else "",
     )
 
 

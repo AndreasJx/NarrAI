@@ -129,7 +129,7 @@ class SimulatedPublisher:
 
 
 class YouTubePublisher:
-    """Small HTTP adapter; credentials are supplied only through environment settings."""
+    """Small HTTP adapter; the token comes from the OAuth account, YOUTUBE_ACCESS_TOKEN is a manual fallback."""
 
     def __init__(self, settings: Settings, access_token: str | None = None):
         token = access_token or settings.youtube_access_token
@@ -189,10 +189,12 @@ class TikTokPublisher:
         return PublishResult(external_id=data["publish_id"], simulated=False)
 
 
-def publisher_for(platform: str, live: bool, settings: Settings, access_token: str | None = None):
+def publisher_for(
+    platform: str, live: bool, settings: Settings, access_token: str | None = None, live_enabled: bool | None = None
+):
     if not live:
         return SimulatedPublisher(platform)
-    if not settings.allow_live_publish:
+    if not (settings.allow_live_publish if live_enabled is None else live_enabled):
         raise ValueError("Live publishing is disabled")
     if platform == "youtube":
         return YouTubePublisher(settings, access_token)

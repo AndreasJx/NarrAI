@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select
 
 from ..auth import Context, CurrentContext, EditorContext
+from ..channels import access_token_for, live_allowed
 from ..config import get_settings
 from ..deps import DbSession, approved, audit, require_project
 from ..models import ChannelConnection, Publication, Render, utcnow
-from ..oauth import OAuthService
-from ..publishing import access_token_for, execute_publication
+from ..publishing import execute_publication
 from ..adapters import publication_status
 from ..retention import credits_for, with_credits
 from ..schemas import PublicationCreate, PublicationOut
@@ -62,9 +62,9 @@ def publish(
         raise HTTPException(409, "A publicação precisa ser aprovada")
     settings = get_settings()
     if body.live:
-        if not settings.allow_live_publish:
-            raise HTTPException(400, "Publicação real desativada (ALLOW_LIVE_PUBLISH=false)")
-        if connection.platform == "local" or not access_token_for(connection, OAuthService(settings)):
+        if not live_allowed(db, ctx.organization.id, connection.platform, settings):
+            raise HTTPException(400, "Publicação real desativada: libere a plataforma em Configurações > Plataformas")
+        if connection.platform == "local" or not access_token_for(db, connection, settings):
             raise HTTPException(400, "Conecte o canal via OAuth antes de publicar de verdade")
     scheduled = body.scheduled_at
     if scheduled and scheduled.tzinfo:
@@ -123,7 +123,7 @@ def reconcile_publication(publication_id: int, ctx: EditorContext, db: DbSession
     if publication.simulated or not publication.external_id:
         raise HTTPException(409, "É necessária uma publicação real")
     connection = db.get(ChannelConnection, publication.connection_id)
-    token = access_token_for(connection, OAuthService(get_settings())) if connection else None
+    token = access_token_for(db, connection, get_settings())
     if not token:
         raise HTTPException(409, "Credenciais OAuth são necessárias")
     try:

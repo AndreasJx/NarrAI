@@ -31,6 +31,8 @@ const INTEGRATION_LABEL: Record<string, string> = {
   open_media: "Wikimedia + Openverse",
   fair_use_clips: "Clipes curtos (yt-dlp)",
   queue: "Fila do worker",
+  youtube_login: "Login do YouTube",
+  tiktok_login: "Login do TikTok",
   live_publish: "Publicação real",
 };
 

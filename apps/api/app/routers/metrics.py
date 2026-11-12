@@ -4,11 +4,10 @@ from sqlalchemy import select
 
 from ..adapters import metrics_for
 from ..auth import CurrentContext, EditorContext
+from ..channels import access_token_for
 from ..config import get_settings
 from ..deps import DbSession, audit, require_project
 from ..models import ChannelConnection, Experiment, Insight, MetricSnapshot, Publication
-from ..oauth import OAuthService
-from ..publishing import access_token_for
 from ..schemas import (
     ExperimentCreate,
     ExperimentOut,
@@ -49,7 +48,7 @@ def refresh_metrics(publication_id: int, ctx: EditorContext, db: DbSession, wind
     if publication.simulated or not publication.external_id:
         raise HTTPException(409, "É necessária uma publicação real")
     connection = db.get(ChannelConnection, publication.connection_id)
-    token = access_token_for(connection, OAuthService(get_settings())) if connection else None
+    token = access_token_for(db, connection, get_settings())
     if not token:
         raise HTTPException(409, "Credenciais OAuth são necessárias")
     try:

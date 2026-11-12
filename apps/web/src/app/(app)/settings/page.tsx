@@ -2,17 +2,19 @@
 
 import { Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { use, useState, type FormEvent } from "react";
 
 import { AutopilotSettingsForm } from "@/components/autopilot/SettingsForm";
 import { useSession } from "@/components/Session";
+import { PlatformsPanel } from "@/components/settings/PlatformsPanel";
 import { useToast } from "@/components/Toast";
 import { ErrorNotice, Loading, Panel } from "@/components/ui";
 import { api, type Role } from "@/lib/api";
-import { formatDate, money, ROLE_LABEL } from "@/lib/format";
+import { formatDate, money, PLATFORM_LABEL, ROLE_LABEL } from "@/lib/format";
 import { useAction, useResource } from "@/lib/hooks";
 
-export default function SettingsPage() {
+export default function SettingsPage({ searchParams }: { searchParams: Promise<{ connected?: string; oauth_error?: string }> }) {
+  const { connected, oauth_error: oauthError } = use(searchParams);
   const { me, isOwner, refresh } = useSession();
   const toast = useToast();
   const { busy, run } = useAction();
@@ -65,9 +67,12 @@ export default function SettingsPage() {
         <div>
           <p className="eyebrow">ADMINISTRAÇÃO</p>
           <h1 className="page-title">Configurações</h1>
-          <p className="hero-copy">Organização, equipe, papéis e limites de gasto.</p>
+          <p className="hero-copy">Organização, equipe, papéis, limites de gasto e contas de publicação.</p>
         </div>
       </section>
+
+      {connected && <div className="notice">Conta do {PLATFORM_LABEL[connected] ?? connected} conectada e disponível para todos os projetos.</div>}
+      {oauthError && <div className="notice notice-error">Conexão do canal não concluída: {oauthError}</div>}
 
       <div className="tab-grid">
         <Panel title="Organização" description={isOwner ? undefined : "Somente proprietários podem editar."}>
@@ -101,6 +106,8 @@ export default function SettingsPage() {
           </dl>
         </Panel>
       </div>
+
+      <PlatformsPanel organizationId={me.organization.id} />
 
       <Panel
         title="Piloto automático"

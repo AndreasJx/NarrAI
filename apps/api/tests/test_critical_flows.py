@@ -166,10 +166,10 @@ def test_budget_is_enforced(client):
 
 def test_oauth_state_and_credentials_are_signed_and_encrypted():
     service = OAuthService(Settings(credential_secret="a-long-local-test-secret"))
-    state = service._state("youtube", 42)
-    assert service.verify_state(state, "youtube") == 42
+    assert service.verify_state(service._state("youtube", 7, 42), "youtube") == (7, 42)
+    assert service.verify_state(service._state("youtube", 7), "youtube") == (7, None)
     # Signatures are binary and often contain b"."; every one of them must still verify.
-    assert all(service.verify_state(service._state("youtube", n), "youtube") == n for n in range(300))
+    assert all(service.verify_state(service._state("youtube", n, n), "youtube") == (n, n) for n in range(300))
 
     encrypted = service.encrypt("access-token")
     assert encrypted != "access-token"
